@@ -2,12 +2,16 @@ package pac.security.config;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.reactive.EnableWebFluxSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import pac.security.filter.LoginFilter;
 
 @Configuration
 @EnableWebSecurity
@@ -16,6 +20,19 @@ public class SecurityConfig {
     /* SecurityConfig
     * 스프링 시큐리티의 인가 및 설정을 담당하는 클래스
     * SecurityConfig 구현은 Spring Security 세부 버전별로 많이 상이 */
+
+    // AuthenticationManager가 인자로 받을 AuthenticationConfiguration 객체 생성자 주입
+    private final AuthenticationConfiguration authenticationConfiguration;
+
+    public SecurityConfig(AuthenticationConfiguration authenticationConfiguration) {
+        this.authenticationConfiguration = authenticationConfiguration;
+    }
+
+    // AuthenticationManager Bean 등록
+    @Bean
+    public AuthenticationManager authenticationManager(AuthenticationConfiguration configuration) throws Exception {
+        return configuration.getAuthenticationManager();
+    }
 
     /**
      * 비밀번호 인코딩
@@ -43,8 +60,12 @@ public class SecurityConfig {
         httpSecurity
                 .authorizeHttpRequests((auth) -> auth
                         .requestMatchers("/login", "/", "/join").permitAll()
-                        .requestMatchers("/admin").hasRole("ADMIN")
                         .anyRequest().authenticated());
+
+        // 필터 추가 : LoginFilter()는 인자를 받음
+        // AuthenticationManager() 메소드에 authenticationConfiguration 객체를 넣어야 함
+        httpSecurity
+                .addFilterAt(new LoginFilter(authenticationManager(authenticationConfiguration)), UsernamePasswordAuthenticationFilter.class);
 
         /* 세션 설정
         * JWT를 통한 인증/인가를 위해서 세션을 STATELESS 상태로 설정하는 것이 중요
