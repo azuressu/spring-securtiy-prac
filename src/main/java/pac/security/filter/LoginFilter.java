@@ -1,14 +1,21 @@
 package pac.security.filter;
 
+import jakarta.servlet.FilterChain;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.NoArgsConstructor;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.core.AuthenticationException;
+import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.web.authentication.AuthenticationFilter;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import pac.security.config.JWTUtil;
+import pac.security.userdetails.CustomUserDetails;
+
+import java.util.Collection;
+import java.util.Iterator;
 
 public class LoginFilter extends UsernamePasswordAuthenticationFilter {
 
@@ -40,14 +47,31 @@ public class LoginFilter extends UsernamePasswordAuthenticationFilter {
     *  따라서 JWT 응답 구문 작성이 필요한데, JWT 발급 클래스를 아직 생성하지 않았으므로
     *  다음 시간에 DB 기반 회원 검증 구현 후, JWT 발급 및 검증을 진행하는 클래스 생성 예정*/
     @Override
-    protected void successfulAuthentication(HttpServletRequest request, HttpServletResponse response) {
+    protected void successfulAuthentication(HttpServletRequest request, HttpServletResponse response,
+                                            FilterChain filterChain, Authentication authentication) {
+        // UserDetails
+        CustomUserDetails customUserDetails = (CustomUserDetails) authentication.getPrincipal();
 
+        String username = customUserDetails.getUsername();
+
+        Collection<? extends GrantedAuthority> authorities = authentication.getAuthorities();
+        Iterator<? extends GrantedAuthority> iterator = authorities.iterator();
+        GrantedAuthority auth = iterator.next();
+
+        String role = auth.getAuthority();
+
+        String token = jwtUtil.createJwt(username, role, 60*60*10L);
+
+        // 예시 : Authorization: Bearer 인증토큰String
+        response.addHeader("Authorization", "Bearer " + token);
     }
 
     // 로그인 실패 시 실행하는 메소드
     @Override
-    protected void unsuccessfulAuthentication(HttpServletRequest request, HttpServletResponse response) {
-
+    protected void unsuccessfulAuthentication(HttpServletRequest request, HttpServletResponse response,
+                                              AuthenticationException failed) {
+        // 로그인 실패 시 401 응답 코드 반환
+        response.setStatus(401);
     }
 
 
