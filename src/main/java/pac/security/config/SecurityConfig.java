@@ -23,9 +23,11 @@ public class SecurityConfig {
 
     // AuthenticationManager가 인자로 받을 AuthenticationConfiguration 객체 생성자 주입
     private final AuthenticationConfiguration authenticationConfiguration;
+    private final JWTUtil jwtUtil;
 
-    public SecurityConfig(AuthenticationConfiguration authenticationConfiguration) {
+    public SecurityConfig(AuthenticationConfiguration authenticationConfiguration, JWTUtil jwtUtil) {
         this.authenticationConfiguration = authenticationConfiguration;
+        this.jwtUtil = jwtUtil;
     }
 
     // AuthenticationManager Bean 등록
@@ -65,7 +67,7 @@ public class SecurityConfig {
         // 필터 추가 : LoginFilter()는 인자를 받음
         // AuthenticationManager() 메소드에 authenticationConfiguration 객체를 넣어야 함
         httpSecurity
-                .addFilterAt(new LoginFilter(authenticationManager(authenticationConfiguration)), UsernamePasswordAuthenticationFilter.class);
+                .addFilterAt(new LoginFilter(authenticationManager(authenticationConfiguration), jwtUtil), UsernamePasswordAuthenticationFilter.class);
 
         /* 세션 설정
         * JWT를 통한 인증/인가를 위해서 세션을 STATELESS 상태로 설정하는 것이 중요
